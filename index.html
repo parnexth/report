@@ -3,77 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Command Center</title>
+    <title>Campaign Performance Report</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #111827; color: #fff; } /* Dark Mode */
-        .brand-card:hover { transform: translateY(-5px); border-color: #10b981; }
-        .search-box:focus-within { border-color: #10b981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        
+        /* --- BUTTON STYLE (Capsule) --- */
+        .tab-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 8px 24px; border-radius: 99px; border: 2px solid #cbd5e1;
+            background-color: white; color: #64748b; font-weight: 700; font-size: 14px;
+            cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            white-space: nowrap;
+        }
+        .tab-btn:hover { border-color: #34d399; color: #059669; background-color: #ecfdf5; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .tab-btn.active { background-color: #059669; border-color: #047857; color: white; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .hidden { display: none !important; }
+        #loading { position: fixed; inset: 0; background: white; z-index: 999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        iframe { width: 100%; height: 100%; }
+
+        @media print {
+            button, select, .no-print, #loading, #error-msg, .tab-btn:not(.active) { display: none !important; }
+            .bg-gray-50 { border: none !important; background: none !important; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white !important; }
+            @page { size: landscape; margin: 0.5cm; }
+            .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; }
+            .shadow-sm, .shadow-lg { box-shadow: none !important; border: 1px solid #ddd !important; }
+        }
+
+        /* --- MAP STYLES --- */
+        .store-grid {
+            display: grid;
+            grid-template-columns: 50px 30px 180px 30px 180px 30px 180px 30px 180px 20px;
+            grid-template-rows: 40px 30px 70px 30px 70px 30px 80px 20px 40px 40px;
+            gap: 2px;
+            position: relative;
+            width: fit-content;
+            margin: 0 auto;
+        }
+
+        .store-bg { grid-column: 2 / -1; grid-row: 1 / 10; background-color: #cbd5e1; border-radius: 20px; z-index: 0; }
+        .office-bg { grid-column: 9 / span 2; grid-row: 1 / span 5; background-color: #e2e8f0; border-top-right-radius: 20px; border-bottom-left-radius: 20px; opacity: 0.6; z-index: 0; }
+
+        .slot-box {
+            background-color: #64748b; border: 1px solid #475569; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: white; font-weight: bold;
+            cursor: pointer; transition: all 0.2s; z-index: 10; overflow: hidden; text-align: center;
+        }
+        
+        .g-container { display: grid; grid-template-rows: 1fr 1fr; grid-template-columns: 1fr 1fr 1fr; gap: 2px; background-color: #e2e8f0; padding: 3px; border-radius: 4px; z-index: 10; }
+        .g-slot { background-color: #94a3b8; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; cursor: pointer; transition: all 0.2s; overflow: hidden; white-space: nowrap; }
+
+        .active-slot-highlight { background-color: #ef4444 !important; box-shadow: 0 0 15px #ef4444; transform: scale(1.1); z-index: 50; color: white !important; animation: pulse-red 1.5s infinite; border: 1px solid white; }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+        .cashier-box { background-color: #e2e8f0; border: 2px solid #94a3b8; border-radius: 8px; color: #475569; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10; font-size: 14px; }
+        .outside-box { background-color: #94a3b8; border-color: #64748b; }
+        .vertical-text { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); }
+        .move-up { transform: translateY(-30px); }
+        .entrance-label { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); display: flex; align-items: center; justify-content: center; color: #94a3b8; font-weight: bold; font-size: 20px; letter-spacing: 4px; opacity: 0.6; pointer-events: none; }
     </style>
 </head>
 <body>
 
-    <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50 shadow-lg">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+    <div id="loading">
+        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-600 mb-4"></i>
+        <p class="text-gray-500">Connecting to Database...</p>
+    </div>
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center font-bold text-white text-2xl shadow-emerald-900/50 shadow-lg">
-                    <i class="fa-solid fa-network-wired"></i>
+                <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden border border-gray-200">
+                    <img id="header-logo" class="w-full h-full object-contain hidden" onerror="this.style.display='none'"> 
+                    <i id="header-icon" class="fa-solid fa-chart-simple text-emerald-800 text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-wider text-white">COMMAND CENTER</h1>
-                    <p class="text-xs text-gray-400">Centralized Media Management System</p>
+                    <h1 class="text-xl font-bold text-gray-800 tracking-tight uppercase" id="brand-title">...</h1>
+                    <p class="text-sm text-gray-500">Monthly Performance Report</p>
                 </div>
             </div>
             
-            <div class="text-right hidden md:block">
-                <div class="text-xs text-gray-500 uppercase tracking-widest">Total Active Brands</div>
-                <div class="text-3xl font-bold text-emerald-500" id="total-count">0</div>
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg">
+                    <i class="fa-solid fa-calendar-days text-emerald-600"></i>
+                    <select id="monthSelector" class="bg-transparent font-bold text-gray-700 outline-none cursor-pointer" onchange="changeMonth()"></select>
+                </div>
             </div>
         </div>
     </header>
 
-    <main class="container mx-auto px-6 py-10">
+    <main class="container mx-auto px-4 py-8 max-w-6xl">
+        <div id="error-msg" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"></div>
 
-        <div class="max-w-2xl mx-auto mb-12">
-            <div class="search-box flex items-center bg-gray-800 border-2 border-gray-700 rounded-xl px-4 py-3 transition-all duration-300">
-                <i class="fa-solid fa-search text-gray-400 text-xl mr-4"></i>
-                <input type="text" id="searchInput" placeholder="Search Brand Name or Secret ID..." class="bg-transparent border-none outline-none text-white w-full text-lg placeholder-gray-500" onkeyup="filterBrands()">
-            </div>
-            <p class="text-center text-gray-500 text-xs mt-3">System auto-syncs with Google Sheets database.</p>
-        </div>
-
-        <div id="loading" class="text-center py-20">
-            <i class="fa-solid fa-circle-notch fa-spin text-5xl text-emerald-600 mb-6"></i>
-            <p class="text-gray-400 text-lg animate-pulse">Syncing Database...</p>
-        </div>
-
-        <div id="brand-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 hidden">
+        <div id="main-content" class="hidden">
+            
+            <div class="mb-8 flex flex-wrap items-center gap-4 pb-4 border-b border-gray-200">
+                <div class="flex items-center gap-2 text-gray-400">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span class="text-sm font-bold uppercase tracking-wider whitespace-nowrap">SELECT SLOT:</span>
+                </div>
+                <div class="flex flex-wrap gap-3" id="tab-container"></div>
             </div>
 
+            <div class="animate-fade-in">
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-gray-500">
+                        <div class="text-gray-400 text-xs uppercase font-bold">Slot ID</div>
+                        <div class="text-xl font-bold text-gray-800 mt-1 truncate" id="val-slot">--</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                        <div class="text-gray-400 text-xs uppercase font-bold">Impression</div>
+                        <div class="text-2xl font-bold text-emerald-600 mt-1" id="val-imp">--</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-400">
+                        <div class="text-gray-400 text-xs uppercase font-bold">Total Hours</div>
+                        <div class="text-2xl font-bold text-gray-800 mt-1" id="val-hr">--</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-indigo-500">
+                        <div class="text-gray-400 text-xs uppercase font-bold">Media Time</div>
+                        <div class="text-2xl font-bold text-gray-800 mt-1" id="val-dur">--</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col h-full">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-gray-700"><i class="fa-solid fa-play-circle text-emerald-600 mr-2"></i>Media Preview (สื่อโฆษณา)</h3>
+                        </div>
+                        <div class="aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center relative group">
+                            <video id="main-video" class="w-full h-full object-contain hidden" controls autoplay muted loop playsinline><source src="" type="video/mp4"></video>
+                            <iframe id="youtube-frame" class="hidden" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                            <img id="main-image" class="w-full h-full object-contain hidden" src="">
+                            <div id="media-loader" class="absolute inset-0 flex items-center justify-center bg-gray-900 text-white flex-col hidden">
+                                <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-400 text-center truncate" id="media-source-text"></div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex flex-col h-full">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-gray-700"><i class="fa-solid fa-camera text-emerald-600 mr-2"></i>Shelf Photo (รูปถ่ายหน้างาน)</h3>
+                        </div>
+                        <div class="relative bg-gray-100 rounded-lg overflow-hidden flex-1 min-h-[300px]">
+                            <img id="shelf-display-img" src="" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400?text=No+Shelf+Photo'">
+                            <div class="absolute bottom-4 right-4 bg-black/70 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
+                                <i class="fa-solid fa-check-circle mr-1 text-green-400"></i> Active Location
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm break-inside-avoid overflow-hidden">
+                    <div class="flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
+                        <i class="fa-solid fa-map-location-dot text-emerald-600 text-xl"></i>
+                        <h3 class="font-bold text-gray-700 text-lg">Store Map Overview (ผังร้านค้า)</h3>
+                    </div>
+                    
+                    <div class="w-full overflow-x-auto flex justify-center">
+                        <div class="store-grid">
+                            
+                            <div class="store-bg"></div>
+                            <div class="office-bg"></div>
+
+                            <div id="ML" class="slot-box outside-box col-start-1 row-start-1 row-span-2 w-full">ML</div>
+                            <div class="col-start-1 row-start-3 row-span-5 entrance-label w-full flex items-center justify-center">ENTRANCE</div>
+                            <div id="MR" class="slot-box outside-box col-start-1 row-start-8 row-span-2 w-full">MR</div>
+
+                            <div class="col-start-2 col-span-7 row-start-1 flex gap-1 h-8 mt-2 z-10 justify-start px-2">
+                                <div id="WL1" class="slot-box flex-1">WL1</div>
+                                <div id="WL2" class="slot-box flex-1">WL2</div>
+                                <div id="WL3" class="slot-box flex-1">WL3</div>
+                                <div id="WL4" class="slot-box flex-1">WL4</div>
+                                <div id="WL5" class="slot-box flex-1">WL5</div>
+                                <div id="WL6" class="slot-box flex-1">WL6</div>
+                                <div id="WL7" class="slot-box flex-1">WL7</div>
+                                <div id="WL8" class="slot-box flex-1">WL8</div>
+                            </div>
+
+                            <div class="col-start-3 row-start-3 g-container move-up">
+                                <div id="GL1-F" class="g-slot">GL1-F</div> <div id="GL1-M" class="g-slot">GL1-M</div> <div id="GL1-B" class="g-slot">GL1-B</div>
+                                <div id="GR1-F" class="g-slot">GR1-F</div> <div id="GR1-M" class="g-slot">GR1-M</div> <div id="GR1-B" class="g-slot">GR1-B</div>
+                            </div>
+                            <div id="GF2" class="col-start-2 row-start-5 slot-box writing-vertical text-[8px] h-full move-up" style="background-color: #64748b; border-color: #475569;">GF2</div>
+                            <div class="col-start-3 row-start-5 g-container move-up">
+                                <div id="GL2-F" class="g-slot">GL2-F</div> <div id="GL2-M" class="g-slot">GL2-M</div> <div id="GL2-B" class="g-slot">GL2-B</div>
+                                <div id="GR2-F" class="g-slot">GR2-F</div> <div id="GR2-M" class="g-slot">GR2-M</div> <div id="GR2-B" class="g-slot">GR2-B</div>
+                            </div>
+                            <div id="CASHIER" class="col-start-3 row-start-7 row-span-2 cashier-box h-full" style="align-self: stretch;">CASHIER</div>
+
+                            <div class="col-start-5 row-start-3 g-container">
+                                <div id="GL3-F" class="g-slot">GL3-F</div> <div id="GL3-M" class="g-slot">GL3-M</div> <div id="GL3-B" class="g-slot">GL3-B</div>
+                                <div id="GR3-F" class="g-slot">GR3-F</div> <div id="GR3-M" class="g-slot">GR3-M</div> <div id="GR3-B" class="g-slot">GR3-B</div>
+                            </div>
+                            <div class="col-start-5 row-start-5 g-container">
+                                <div id="GL4-F" class="g-slot">GL4-F</div> <div id="GL4-M" class="g-slot">GL4-M</div> <div id="GL4-B" class="g-slot">GL4-B</div>
+                                <div id="GR4-F" class="g-slot">GR4-F</div> <div id="GR4-M" class="g-slot">GR4-M</div> <div id="GR4-B" class="g-slot">GR4-B</div>
+                            </div>
+                            <div class="col-start-5 row-start-7 g-container">
+                                <div id="GL5-F" class="g-slot">GL5-F</div> <div id="GL5-M" class="g-slot">GL5-M</div> <div id="GL5-B" class="g-slot">GL5-B</div>
+                                <div id="GR5-F" class="g-slot">GR5-F</div> <div id="GR5-M" class="g-slot">GR5-M</div> <div id="GR5-B" class="g-slot">GR5-B</div>
+                            </div>
+
+                            <div class="col-start-7 row-start-3 g-container">
+                                <div id="GL6-F" class="g-slot">GL6-F</div> <div id="GL6-M" class="g-slot">GL6-M</div> <div id="GL6-B" class="g-slot">GL6-B</div>
+                                <div id="GR6-F" class="g-slot">GR6-F</div> <div id="GR6-M" class="g-slot">GR6-M</div> <div id="GR6-B" class="g-slot">GR6-B</div>
+                            </div>
+                            <div class="col-start-7 row-start-5 g-container">
+                                <div id="GL7-F" class="g-slot">GL7-F</div> <div id="GL7-M" class="g-slot">GL7-M</div> <div id="GL7-B" class="g-slot">GL7-B</div>
+                                <div id="GR7-F" class="g-slot">GR7-F</div> <div id="GR7-M" class="g-slot">GR7-M</div> <div id="GR7-B" class="g-slot">GR7-B</div>
+                            </div>
+                            <div class="col-start-7 row-start-7 g-container">
+                                <div id="GL8-F" class="g-slot">GL8-F</div> <div id="GL8-M" class="g-slot">GL8-M</div> <div id="GL8-B" class="g-slot">GL8-B</div>
+                                <div id="GR8-F" class="g-slot">GR8-F</div> <div id="GR8-M" class="g-slot">GR8-M</div> <div id="GR8-B" class="g-slot">GR8-B</div>
+                            </div>
+
+                            <div class="col-start-9 row-start-7 g-container">
+                                <div id="GL9-F" class="g-slot">GL9-F</div> <div id="GL9-M" class="g-slot">GL9-M</div> <div id="GL9-B" class="g-slot">GL9-B</div>
+                                <div id="GR9-F" class="g-slot">GR9-F</div> <div id="GR9-M" class="g-slot">GR9-M</div> <div id="GR9-B" class="g-slot">GR9-B</div>
+                            </div>
+
+                            <div class="col-start-2 col-span-2 row-start-9 h-8 self-end px-2 z-10 mb-1">
+                                <div id="CS" class="slot-box w-full h-full">CS</div>
+                            </div>
+                            
+                            <div class="col-start-4 col-span-5 row-start-9 flex gap-1 h-8 self-end z-10 mb-1 justify-start">
+                                <div id="WR1" class="slot-box flex-1">WR1</div>
+                                <div id="WR2" class="slot-box flex-1">WR2</div>
+                                <div id="WR3" class="slot-box flex-1">WR3</div>
+                                <div id="WR4" class="slot-box flex-1">WR4</div>
+                                <div id="WR5" class="slot-box flex-1">WR5</div>
+                            </div>
+
+                            <div class="col-start-2 col-span-2 row-start-10 flex gap-2 h-8 mt-1">
+                                <div id="BBL" class="slot-box outside-box flex-1">BBL</div>
+                                <div id="BBR" class="slot-box outside-box flex-1">BBR</div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
     </main>
-
-    <footer class="text-center py-8 text-gray-600 text-xs border-t border-gray-800 mt-10">
-        <p>SECURE ADMIN PANEL | VER 3.2 (Clean URL)</p>
-    </footer>
 
     <script>
         // ==========================================
-        //  ใส่ Link CSV ของคุณ
+        //  CSV Link
         // ==========================================
         const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRPt5_VqUQSurUF8zod1Ns67QBSMvPhFwpuwvniE8wzX3dDOrXyxClrDywMwMnkaJ-Ite1M3DlLeTZt/pub?output=csv"; 
-        
-        // *** แก้ตรงนี้: ใช้ "./" เพื่อให้ลิงก์เป็น Clean URL ***
-        // ผลลัพธ์: yoursite.com/?brand=xyz (ไม่มี index.html)
-        const REPORT_PAGE_URL = "./"; 
         // ==========================================
 
-        let allBrands = [];
+        let currentBrandData = {};
+        let currentSlots = [];
+        let currentSlotData = null; 
+
+        function cleanNumber(val) {
+            if (!val) return 0;
+            const clean = String(val).replace(/,/g, '').trim();
+            const num = Number(clean);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function processMediaLink(url) {
+            if (!url) return { type: 'none', url: '' };
+            url = url.trim();
+            if (url.includes("drive.google.com") && url.includes("/d/")) {
+                const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (idMatch && idMatch[1]) return { type: 'drive', url: `https://drive.google.com/uc?export=view&id=${idMatch[1]}` };
+            }
+            if (url.includes("youtube.com") || url.includes("youtu.be")) {
+                let videoId = "";
+                if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
+                else if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
+                if (url.includes("/shorts/")) videoId = url.split("/shorts/")[1].split("?")[0];
+                if (videoId) return { type: 'youtube', url: `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}` };
+            }
+            if (url.match(/\.(mp4|webm|mov)$/i)) return { type: 'video', url: url };
+            return { type: 'image', url: url };
+        }
 
         function convertDriveLink(url) {
             if (!url) return "";
@@ -86,80 +304,129 @@
         }
 
         window.onload = function() {
-            fetchData();
+            const urlParams = new URLSearchParams(window.location.search);
+            const brandID = urlParams.get('brand');
+            if (!brandID) { showError("Error: No Brand ID specified in URL."); return; }
+            document.getElementById('brand-title').innerText = "Loading...";
+            fetchData(brandID);
         };
 
         function fetchData(brandID) {
             Papa.parse(SHEET_CSV_URL, {
                 download: true, header: true, skipEmptyLines: true,
-                complete: function(results) { processData(results.data); },
-                error: function(err) { alert("Connection Failed: Cannot load Google Sheet."); }
+                complete: function(results) {
+                    const rows = results.data;
+                    const filtered = rows.filter(row => row.Brand_ID && row.Brand_ID.toLowerCase().trim() === brandID.toLowerCase().trim());
+
+                    if (filtered.length === 0) { showError("No data found for brand: " + brandID); return; }
+
+                    const brandName = filtered[0].Brand_Name || brandID;
+                    document.getElementById('brand-title').innerText = brandName;
+
+                    if (filtered[0].Brand_Logo_URL) {
+                        const logoMedia = processMediaLink(filtered[0].Brand_Logo_URL);
+                        const logoImg = document.getElementById('header-logo');
+                        document.getElementById('header-icon').classList.add('hidden');
+                        logoImg.src = logoMedia.url;
+                        logoImg.classList.remove('hidden');
+                    }
+
+                    currentBrandData = filtered.reduce((acc, row) => {
+                        const month = row.Month.trim();
+                        if (!acc[month]) acc[month] = [];
+                        acc[month].push(row);
+                        return acc;
+                    }, {});
+
+                    initSystem();
+                },
+                error: function() { showError("Connection Error: Cannot load Google Sheet."); }
             });
         }
 
-        function processData(rows) {
-            const uniqueBrands = {};
-            rows.forEach(row => {
-                if(!row.Brand_ID) return;
-                const id = row.Brand_ID.trim();
-                const name = row.Brand_Name ? row.Brand_Name.trim().toUpperCase() : id.toUpperCase();
-                
-                if(!uniqueBrands[id]) {
-                    uniqueBrands[id] = { id: id, name: name, logo: row.Brand_Logo_URL || "", slotCount: 0 };
-                }
-                uniqueBrands[id].slotCount++;
-            });
-
-            allBrands = Object.values(uniqueBrands);
-            allBrands.sort((a, b) => a.name.localeCompare(b.name));
-            renderGrid(allBrands);
-        }
-
-        function renderGrid(brands) {
-            const grid = document.getElementById('brand-grid');
+        function initSystem() {
             document.getElementById('loading').classList.add('hidden');
-            grid.classList.remove('hidden');
-            
-            document.getElementById('total-count').innerText = brands.length;
-            grid.innerHTML = '';
+            document.getElementById('main-content').classList.remove('hidden');
+            const selector = document.getElementById('monthSelector');
+            const months = Object.keys(currentBrandData);
+            if(months.length === 0) return;
+            months.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.innerText = m.toUpperCase();
+                selector.appendChild(opt);
+            });
+            changeMonth();
+        }
 
-            brands.forEach(brand => {
-                const logoUrl = convertDriveLink(brand.logo);
-                const logoHtml = logoUrl 
-                    ? `<img src="${logoUrl}" class="w-full h-full object-contain p-2 bg-white">`
-                    : `<span class="text-2xl font-bold text-gray-400">${brand.name.charAt(0)}</span>`;
+        function changeMonth() {
+            const monthKey = document.getElementById('monthSelector').value;
+            currentSlots = currentBrandData[monthKey];
+            renderTabs();
+            loadSlot(0);
+        }
 
-                const card = document.createElement('a');
-                
-                // สร้างลิงก์แบบ Clean URL
-                card.href = `${REPORT_PAGE_URL}?brand=${brand.id}`; 
-                
-                card.target = "_blank"; 
-                card.className = `brand-card block bg-gray-800 border border-gray-700 rounded-xl p-6 transition-all duration-300 group relative overflow-hidden flex items-center gap-4`;
-                
-                card.innerHTML = `
-                    <div class="relative z-10 w-16 h-16 rounded-lg bg-gray-700 flex-shrink-0 overflow-hidden border border-gray-600 flex items-center justify-center">
-                        ${logoHtml}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition truncate">${brand.name}</h3>
-                        <p class="text-xs text-gray-500 mb-1 truncate">Key: ${brand.id}</p>
-                        <span class="inline-block bg-gray-900 text-gray-300 text-[10px] px-2 py-0.5 rounded border border-gray-700">
-                            ${brand.slotCount} Data Rows
-                        </span>
-                    </div>
-                    <div class="text-gray-600 group-hover:text-emerald-500 transition">
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </div>
-                `;
-                grid.appendChild(card);
+        function renderTabs() {
+            const container = document.getElementById('tab-container');
+            container.innerHTML = '';
+            currentSlots.forEach((item, index) => {
+                const btn = document.createElement('button');
+                btn.className = `tab-btn`; 
+                btn.onclick = () => loadSlot(index);
+                btn.id = `tab-${index}`;
+                btn.innerText = item.Slot_ID || 'Unknown Slot';
+                container.appendChild(btn);
             });
         }
 
-        function filterBrands() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allBrands.filter(b => b.name.toLowerCase().includes(query) || b.id.toLowerCase().includes(query));
-            renderGrid(filtered);
+        function loadSlot(index) {
+            currentSlotData = currentSlots[index];
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${index}`).classList.add('active');
+
+            document.getElementById('val-slot').innerText = currentSlotData.Slot_ID;
+            document.getElementById('val-imp').innerText = cleanNumber(currentSlotData.Impression).toLocaleString();
+            document.getElementById('val-hr').innerText = currentSlotData.Hours || '-';
+            document.getElementById('val-dur').innerText = currentSlotData.Media_Duration || '-';
+
+            const vdo = document.getElementById('main-video');
+            const yt = document.getElementById('youtube-frame');
+            const img = document.getElementById('main-image');
+            const srcText = document.getElementById('media-source-text');
+            vdo.classList.add('hidden'); vdo.pause(); yt.classList.add('hidden'); yt.src = ""; img.classList.add('hidden');
+
+            const mediaData = processMediaLink(currentSlotData.Media_Source_URL);
+            srcText.innerText = "Source: " + (currentSlotData.Media_Source_URL ? "Loaded" : "None");
+            if (mediaData.type === 'youtube') { yt.src = mediaData.url; yt.classList.remove('hidden'); }
+            else if (mediaData.type === 'video' || mediaData.type === 'drive') { vdo.src = mediaData.url; vdo.classList.remove('hidden'); vdo.onerror = () => { vdo.classList.add('hidden'); img.src = mediaData.url; img.classList.remove('hidden'); }; }
+            else { img.src = mediaData.url; img.classList.remove('hidden'); }
+
+            const shelfImg = document.getElementById('shelf-display-img');
+            const shelfUrl = convertDriveLink(currentSlotData.Shelf_Photo_URL);
+            shelfImg.src = shelfUrl || "https://placehold.co/600x400?text=No+Shelf+Photo";
+
+            updateMapHighlight(currentSlotData.Slot_Name);
+        }
+
+        function updateMapHighlight(targetID) {
+            document.querySelectorAll('.active-slot-highlight').forEach(el => {
+                el.classList.remove('active-slot-highlight');
+            });
+            if(!targetID) return;
+            const cleanID = targetID.trim();
+            const targetElement = document.getElementById(cleanID);
+            if(targetElement) {
+                targetElement.classList.add('active-slot-highlight');
+            } else {
+                console.warn("Map ID not found:", cleanID);
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('loading').classList.add('hidden');
+            const box = document.getElementById('error-msg');
+            box.innerText = msg;
+            box.classList.remove('hidden');
         }
     </script>
 </body>
