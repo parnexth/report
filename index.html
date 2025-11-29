@@ -56,16 +56,29 @@
         .dot.active { background: white; transform: scale(1.2); }
 
         /* --- MAP STYLES --- */
-        .store-grid {
-            display: grid;
-            grid-template-columns: 50px 30px 180px 30px 180px 30px 180px 30px 180px 20px;
-            /* UPDATED: ปรับแถวที่ 2 (Gap) จาก 30px เป็น 80px */
-            grid-template-rows: 40px 80px 70px 30px 70px 30px 80px 20px 40px 40px;
-            gap: 2px;
-            position: relative;
-            width: fit-content;
-            margin: 0 auto;
-        }
+.store-grid {
+    display: grid;
+    /* Columns: คงเดิม 4 โซน (180px) */
+    grid-template-columns: 50px 30px 180px 30px 180px 30px 180px 30px 180px 20px;
+    
+    /* Rows: ปรับแถวที่ 2 (Gap บน) ลดเหลือ 20px เพื่อให้ ML ไม่ยืดเกินไป */
+    grid-template-rows: 
+        40px  /* 1. WL Top */
+        20px  /* 2. Gap (ลดจาก 30px -> 20px) */
+        70px  /* 3. Row 1 */
+        30px  /* 4. Gap */
+        70px  /* 5. Row 2 */
+        30px  /* 6. Gap */
+        40px  /* 7. Row 3 */
+        20px  /* 8. Gap Small */
+        40px  /* 9. Bottom Wall */
+        40px; /* 10. Outside Bottom */
+        
+    gap: 2px;
+    position: relative;
+    width: fit-content;
+    margin: 0 auto;
+}
 
         .store-bg { grid-column: 2 / -1; grid-row: 1 / 10; background-color: #cbd5e1; border-radius: 20px; z-index: 0; }
         .office-bg { grid-column: 9 / span 2; grid-row: 1 / span 5; background-color: #e2e8f0; border-top-right-radius: 20px; border-bottom-left-radius: 20px; opacity: 0.6; z-index: 0; }
@@ -217,8 +230,8 @@
                             <div class="office-bg"></div>
 
                             <div id="ML" class="slot-box outside-box col-start-1 row-start-1 row-span-2 w-full">ML</div>
-                            <div class="col-start-1 row-start-3 row-span-5 entrance-label w-full flex items-center justify-center">ENTRANCE</div>
-                            <div id="MR" class="slot-box outside-box col-start-1 row-start-8 row-span-2 w-full">MR</div>
+<div class="col-start-1 row-start-3 row-span-5 entrance-label w-full flex items-center justify-center">ENTRANCE</div>
+<div id="MR" class="slot-box outside-box col-start-1 row-start-8 row-span-2 w-full">MR</div>
 
                             <div class="col-start-2 col-span-7 row-start-1 flex gap-1 h-8 mt-2 z-10 justify-start px-2">
                                 <div id="WL1" class="slot-box flex-1">WL1</div>
@@ -274,21 +287,21 @@
                             </div>
 
                             <div class="col-start-2 col-span-2 row-start-9 h-8 self-end px-2 z-10 mb-1">
-                                <div id="CS" class="slot-box w-full h-full">CS</div>
-                            </div>
+    <div id="CS" class="slot-box w-full h-full">CS</div>
+</div>
                             
-                            <div class="col-start-4 col-span-3 row-start-9 flex gap-1 h-8 self-end z-10 mb-1 justify-start">
-                                <div id="WR1" class="slot-box w-16">WR1</div>
-                                <div id="WR2" class="slot-box w-16">WR2</div>
-                                <div id="WR3" class="slot-box w-16">WR3</div>
-                                <div id="WR4" class="slot-box w-16">WR4</div>
-                                <div id="WR5" class="slot-box w-16">WR5</div>
-                            </div>
+                            <div class="col-start-4 col-span-4 row-start-9 flex gap-1 h-8 self-end z-10 mb-1 justify-start">
+    <div id="WR1" class="slot-box flex-1">WR1</div>
+    <div id="WR2" class="slot-box flex-1">WR2</div>
+    <div id="WR3" class="slot-box flex-1">WR3</div>
+    <div id="WR4" class="slot-box flex-1">WR4</div>
+    <div id="WR5" class="slot-box flex-1">WR5</div>
+</div>
 
-                            <div class="col-start-2 col-span-2 row-start-10 flex gap-2 h-8 mt-1">
-                                <div id="BBL" class="slot-box outside-box flex-1">BBL</div>
-                                <div id="BBR" class="slot-box outside-box flex-1">BBR</div>
-                            </div>
+<div class="col-start-2 col-span-2 row-start-10 flex gap-2 h-8 mt-1">
+    <div id="BBL" class="slot-box outside-box flex-1">BBL</div>
+    <div id="BBR" class="slot-box outside-box flex-1">BBR</div>
+</div>
 
                         </div>
                     </div>
@@ -522,3 +535,4 @@
     </script>
 </body>
 </html>
+
