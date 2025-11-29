@@ -13,7 +13,7 @@
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
         
-        /* --- BUTTON STYLE (Capsule) --- */
+        /* --- CAPSULE BUTTON STYLE --- */
         .tab-btn {
             display: inline-flex; align-items: center; justify-content: center;
             padding: 8px 24px; border-radius: 99px; border: 2px solid #cbd5e1;
@@ -29,7 +29,7 @@
         iframe { width: 100%; height: 100%; }
 
         @media print {
-            button, select, .no-print, #loading, #error-msg, .tab-btn:not(.active) { display: none !important; }
+            button, select, .no-print, #loading, #error-msg, .tab-btn:not(.active), .carousel-control { display: none !important; }
             .bg-gray-50 { border: none !important; background: none !important; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white !important; }
             @page { size: landscape; margin: 0.5cm; }
@@ -37,11 +37,30 @@
             .shadow-sm, .shadow-lg { box-shadow: none !important; border: 1px solid #ddd !important; }
         }
 
+        /* --- CAROUSEL STYLES (สำหรับเลื่อนรูป) --- */
+        .carousel-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5); color: white;
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; z-index: 20;
+        }
+        .carousel-btn:hover { background-color: rgba(0, 0, 0, 0.8); }
+        .carousel-prev { left: 10px; }
+        .carousel-next { right: 10px; }
+        .carousel-dots {
+            position: absolute; bottom: 10px; left: 0; right: 0;
+            display: flex; justify-content: center; gap: 6px; z-index: 20;
+        }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: 0.2s; }
+        .dot.active { background: white; transform: scale(1.2); }
+
         /* --- MAP STYLES --- */
         .store-grid {
             display: grid;
             grid-template-columns: 50px 30px 180px 30px 180px 30px 180px 30px 180px 20px;
-            grid-template-rows: 40px 30px 70px 30px 70px 30px 80px 20px 40px 40px;
+            /* UPDATED: ปรับแถวที่ 2 (Gap) จาก 30px เป็น 80px */
+            grid-template-rows: 40px 80px 70px 30px 70px 30px 80px 20px 40px 40px;
             gap: 2px;
             position: relative;
             width: fit-content;
@@ -55,14 +74,27 @@
             background-color: #64748b; border: 1px solid #475569; border-radius: 4px;
             display: flex; align-items: center; justify-content: center;
             font-size: 12px; color: white; font-weight: bold;
-            cursor: pointer; transition: all 0.2s; z-index: 10; overflow: hidden; text-align: center;
+            cursor: pointer; transition: background-color 0.2s; /* ลบ transition transform ออก */
+            z-index: 10; overflow: hidden; text-align: center;
         }
         
         .g-container { display: grid; grid-template-rows: 1fr 1fr; grid-template-columns: 1fr 1fr 1fr; gap: 2px; background-color: #e2e8f0; padding: 3px; border-radius: 4px; z-index: 10; }
-        .g-slot { background-color: #94a3b8; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; cursor: pointer; transition: all 0.2s; overflow: hidden; white-space: nowrap; }
+        .g-slot { background-color: #94a3b8; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; cursor: pointer; transition: background-color 0.2s; overflow: hidden; white-space: nowrap; }
 
-        .active-slot-highlight { background-color: #ef4444 !important; box-shadow: 0 0 15px #ef4444; transform: scale(1.1); z-index: 50; color: white !important; animation: pulse-red 1.5s infinite; border: 1px solid white; }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        /* UPDATED: เอา Transform Scale ออก */
+        .active-slot-highlight {
+            background-color: #ef4444 !important; 
+            box-shadow: 0 0 0 2px white, 0 0 10px #ef4444; /* เพิ่มขอบขาวให้เด่นแทนการขยาย */
+            z-index: 50;
+            color: white !important;
+            /* transform: scale(1.1);  <-- REMOVED */
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { background-color: #ef4444; }
+            50% { background-color: #dc2626; }
+            100% { background-color: #ef4444; }
+        }
 
         .cashier-box { background-color: #e2e8f0; border: 2px solid #94a3b8; border-radius: 8px; color: #475569; font-weight: bold; display: flex; align-items: center; justify-content: center; z-index: 10; font-size: 14px; }
         .outside-box { background-color: #94a3b8; border-color: #64748b; }
@@ -154,8 +186,17 @@
                         <div class="flex justify-between items-center mb-3">
                             <h3 class="font-bold text-gray-700"><i class="fa-solid fa-camera text-emerald-600 mr-2"></i>Shelf Photo (รูปถ่ายหน้างาน)</h3>
                         </div>
-                        <div class="relative bg-gray-100 rounded-lg overflow-hidden flex-1 min-h-[300px]">
-                            <img id="shelf-display-img" src="" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/600x400?text=No+Shelf+Photo'">
+                        <div class="relative bg-gray-100 rounded-lg overflow-hidden flex-1 min-h-[300px] group">
+                            <img id="shelf-display-img" src="" class="w-full h-full object-cover transition-opacity duration-300" onerror="this.src='https://placehold.co/600x400?text=No+Shelf+Photo'">
+                            
+                            <div id="carousel-controls" class="hidden">
+                                <div class="carousel-btn carousel-prev" onclick="prevSlide()"><i class="fa-solid fa-chevron-left"></i></div>
+                                <div class="carousel-btn carousel-next" onclick="nextSlide()"><i class="fa-solid fa-chevron-right"></i></div>
+                                <div class="carousel-dots" id="carousel-dots">
+                                    <div class="dot active"></div><div class="dot"></div>
+                                </div>
+                            </div>
+
                             <div class="absolute bottom-4 right-4 bg-black/70 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
                                 <i class="fa-solid fa-check-circle mr-1 text-green-400"></i> Active Location
                             </div>
@@ -236,12 +277,12 @@
                                 <div id="CS" class="slot-box w-full h-full">CS</div>
                             </div>
                             
-                            <div class="col-start-4 col-span-5 row-start-9 flex gap-1 h-8 self-end z-10 mb-1 justify-start">
-                                <div id="WR1" class="slot-box flex-1">WR1</div>
-                                <div id="WR2" class="slot-box flex-1">WR2</div>
-                                <div id="WR3" class="slot-box flex-1">WR3</div>
-                                <div id="WR4" class="slot-box flex-1">WR4</div>
-                                <div id="WR5" class="slot-box flex-1">WR5</div>
+                            <div class="col-start-4 col-span-3 row-start-9 flex gap-1 h-8 self-end z-10 mb-1 justify-start">
+                                <div id="WR1" class="slot-box w-16">WR1</div>
+                                <div id="WR2" class="slot-box w-16">WR2</div>
+                                <div id="WR3" class="slot-box w-16">WR3</div>
+                                <div id="WR4" class="slot-box w-16">WR4</div>
+                                <div id="WR5" class="slot-box w-16">WR5</div>
                             </div>
 
                             <div class="col-start-2 col-span-2 row-start-10 flex gap-2 h-8 mt-1">
@@ -267,6 +308,10 @@
         let currentBrandData = {};
         let currentSlots = [];
         let currentSlotData = null; 
+        
+        // Carousel Vars
+        let shelfImages = [];
+        let currentImgIdx = 0;
 
         function cleanNumber(val) {
             if (!val) return 0;
@@ -389,6 +434,7 @@
             document.getElementById('val-hr').innerText = currentSlotData.Hours || '-';
             document.getElementById('val-dur').innerText = currentSlotData.Media_Duration || '-';
 
+            // Media Preview
             const vdo = document.getElementById('main-video');
             const yt = document.getElementById('youtube-frame');
             const img = document.getElementById('main-image');
@@ -401,11 +447,56 @@
             else if (mediaData.type === 'video' || mediaData.type === 'drive') { vdo.src = mediaData.url; vdo.classList.remove('hidden'); vdo.onerror = () => { vdo.classList.add('hidden'); img.src = mediaData.url; img.classList.remove('hidden'); }; }
             else { img.src = mediaData.url; img.classList.remove('hidden'); }
 
-            const shelfImg = document.getElementById('shelf-display-img');
-            const shelfUrl = convertDriveLink(currentSlotData.Shelf_Photo_URL);
-            shelfImg.src = shelfUrl || "https://placehold.co/600x400?text=No+Shelf+Photo";
+            // Shelf Photo Carousel Setup
+            shelfImages = [];
+            if(currentSlotData.Shelf_Photo_URL) shelfImages.push(convertDriveLink(currentSlotData.Shelf_Photo_URL));
+            if(currentSlotData.Shelf_Photo_URL_2) shelfImages.push(convertDriveLink(currentSlotData.Shelf_Photo_URL_2));
+            
+            currentImgIdx = 0;
+            updateCarousel();
 
             updateMapHighlight(currentSlotData.Slot_Name);
+        }
+
+        function updateCarousel() {
+            const imgEl = document.getElementById('shelf-display-img');
+            const controls = document.getElementById('carousel-controls');
+            const dots = document.querySelectorAll('.dot');
+
+            // Default Placeholder if empty
+            if(shelfImages.length === 0) {
+                imgEl.src = "https://placehold.co/600x400?text=No+Shelf+Photo";
+                controls.classList.add('hidden');
+                return;
+            }
+
+            // Set Image
+            imgEl.style.opacity = 0;
+            setTimeout(() => {
+                imgEl.src = shelfImages[currentImgIdx];
+                imgEl.style.opacity = 1;
+            }, 200);
+
+            // Toggle Controls
+            if(shelfImages.length > 1) {
+                controls.classList.remove('hidden');
+                dots.forEach((dot, idx) => {
+                    if(idx === currentImgIdx) dot.classList.add('active');
+                    else dot.classList.remove('active');
+                });
+            } else {
+                controls.classList.add('hidden');
+            }
+        }
+
+        function nextSlide() {
+            currentImgIdx = (currentImgIdx + 1) % shelfImages.length;
+            updateCarousel();
+        }
+
+        function prevSlide() {
+            currentImgIdx = (currentImgIdx - 1 + shelfImages.length) % shelfImages.length;
+            updateCarousel();
         }
 
         function updateMapHighlight(targetID) {
