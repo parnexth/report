@@ -22,18 +22,10 @@
         .store-grid {
             display: grid;
             grid-template-columns: 50px 30px 180px 30px 180px 30px 180px 30px 180px 20px;
-            grid-template-rows: 
-        30px  /* 1. WL Top */
-        60px  /* 2. Gap (ลดจาก 30px -> 20px) */
-        70px  /* 3. Row 1 */
-        30px  /* 4. Gap */
-        70px  /* 5. Row 2 */
-        30px  /* 6. Gap */
-        70px  /* 7. Row 3 */
-        45px  /* 8. Gap Small */
-        45px  /* 9. Bottom Wall */
-        50px; /* 10. Outside Bottom */
-            gap: 2px; position: relative; width: fit-content;
+            grid-template-rows: 40px 30px 70px 30px 70px 30px 80px 20px 40px 40px;
+            gap: 2px;
+            position: relative;
+            width: fit-content;
         }
 
         .store-bg { grid-column: 2 / -1; grid-row: 1 / 10; background-color: #cbd5e1; border-radius: 20px; z-index: 0; }
@@ -45,16 +37,16 @@
             font-size: 12px; color: white; font-weight: bold;
             cursor: pointer; transition: all 0.2s; z-index: 10; overflow: hidden; text-align: center;
         }
-        
-        /* Hover Effect */
+        /* Sales Hover Effect */
         .slot-box:hover, .g-slot:hover { 
-            filter: brightness(1.2); z-index: 50; 
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            background-color: #3b82f6 !important; 
+            transform: scale(1.05); z-index: 50; 
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
 
-        /* Occupied Style (สีเขียวเมื่อมีแบรนด์) */
+        /* Occupied Style (สีเขียว) */
         .occupied {
-            background-color: #10b981 !important; /* Emerald 500 */
+            background-color: #10b981 !important; 
             border-color: #059669 !important;
             color: white !important;
         }
@@ -98,7 +90,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold tracking-tight text-gray-800">SALES MAP</h1>
-                    <p class="text-xs text-gray-500">สีเขียว = มีลูกค้า / สีเทา = ว่าง</p>
+                    <p class="text-xs text-gray-500">คลิกที่จุดเพื่อดูสถานะการจอง (L1-L12)</p>
                 </div>
             </div>
             <a href="admin.html" class="text-sm text-gray-500 hover:text-indigo-600 font-bold transition">
@@ -139,7 +131,6 @@
                     <div id="GL2-F" class="g-slot" onclick="openModal('GL2-F')">GL2-F</div> <div id="GL2-M" class="g-slot" onclick="openModal('GL2-M')">GL2-M</div> <div id="GL2-B" class="g-slot" onclick="openModal('GL2-B')">GL2-B</div>
                     <div id="GR2-F" class="g-slot" onclick="openModal('GR2-F')">GR2-F</div> <div id="GR2-M" class="g-slot" onclick="openModal('GR2-M')">GR2-M</div> <div id="GR2-B" class="g-slot" onclick="openModal('GR2-B')">GR2-B</div>
                 </div>
-                
                 <div id="CASHIER" class="col-start-3 row-start-7 row-span-2 cashier-box h-full" style="align-self: stretch;">CASHIER</div>
 
                 <div class="col-start-5 row-start-3 g-container">
@@ -265,21 +256,17 @@
                 };
             });
             
-            // --- NEW: อัปเดตสีช่องในแผนผัง (เขียว = มีคนจอง) ---
             updateMapVisuals();
         }
 
-        // ฟังก์ชันระบายสีเขียวให้ช่องที่มีลูกค้า
         function updateMapVisuals() {
             Object.keys(salesData).forEach(slotCode => {
                 const element = document.getElementById(slotCode);
                 if (element) {
-                    // เช็คว่ามี Layer ไหนถูกจองบ้าง
                     const layers = salesData[slotCode].layers;
                     const isOccupied = Object.keys(layers).length > 0;
-
                     if (isOccupied) {
-                        element.classList.add('occupied'); // ใส่คลาสสีเขียว
+                        element.classList.add('occupied');
                         element.title = `Occupied: ${Object.keys(layers).join(', ')}`;
                     }
                 }
@@ -313,7 +300,10 @@
                 ctrls.classList.add('hidden');
             }
 
-            for (let i = 1; i <= 6; i++) {
+            // --- แก้ไขตรงนี้: MR/ML = 12 Layers, อื่นๆ = 6 ---
+            const maxLayers = (slotID === 'ML' || slotID === 'MR') ? 12 : 6;
+
+            for (let i = 1; i <= maxLayers; i++) {
                 const layerKey = `L${i}`;
                 const layerInfo = data.layers[layerKey];
                 const div = document.createElement('div');
